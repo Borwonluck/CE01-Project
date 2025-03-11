@@ -1,11 +1,9 @@
-// import 'dart:io';
-// ignore_for_file: library_private_types_in_public_api, avoid_print
-
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-// import 'result.dart';
+import 'result.dart';
 
 class HistoryItem {
   final String
@@ -77,51 +75,6 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  // ปุ่มย้อนกลับที่อยู่ด้านล่างของหน้าประวัติ
-  Widget _backButtons(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Colors.green, Colors.lightGreen],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors
-                      .transparent, // ทำให้พื้นหลังโปร่งใสเพื่อให้เห็น gradient
-                  shadowColor: Colors.transparent,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text(
-                  'ย้อนกลับ',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ฟังก์ชันแสดงรายละเอียดใน pop-up (Dialog) เมื่อผู้ใช้กดที่รายการประวัติ
   void _showResultDialog(HistoryItem item) {
     showDialog(
@@ -129,48 +82,59 @@ class _HistoryPageState extends State<HistoryPage> {
       builder: (context) {
         return SafeArea(
           child: Dialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Container สำหรับแสดงภาพ (คล้ายกับใน result.dart)
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.green, width: 2),
-                        borderRadius: BorderRadius.circular(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.lightGreen, Colors.green],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Container สำหรับแสดงภาพ (คล้ายกับใน result.dart)
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.green, width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: item.processedImage.isNotEmpty
+                              ? Image.memory(
+                                  base64Decode(item.processedImage),
+                                  fit: BoxFit.contain,
+                                )
+                              : const Text(
+                                  'No Image Available',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                        ),
                       ),
-                      padding: const EdgeInsets.all(10),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: item.processedImage.isNotEmpty
-                            ? Image.memory(
-                                base64Decode(item.processedImage),
-                                fit: BoxFit.contain,
-                              )
-                            : const Text(
-                                'No Image Available',
-                                style: TextStyle(color: Colors.grey),
-                              ),
+                      const SizedBox(height: 16),
+                      _buildDetailBox('ขนาด:', item.size),
+                      _buildDetailBox('ขนาดของเมล็ด:', item.seedSize),
+                      _buildDetailBox('ระยะ:', item.stage),
+                      _buildDetailBox('จำนวนเมล็ด:', item.seedCount.toString()),
+                      _buildDetailBox(
+                        'วันที่และเวลา:',
+                        DateFormat('yyyy/MM/dd HH:mm')
+                            .format(item.createdAt.toLocal()),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDetailBox('ขนาด:', item.size),
-                    _buildDetailBox('ขนาดของเมล็ด:', item.seedSize),
-                    _buildDetailBox('ระยะ:', item.stage),
-                    _buildDetailBox('จำนวนเมล็ด:', item.seedCount.toString()),
-                    _buildDetailBox(
-                      'วันที่และเวลา:',
-                      DateFormat('yyyy/MM/dd HH:mm')
-                          .format(item.createdAt.toLocal()),
-                    ),
-                    _backButtons(context),
-                  ],
+                      const SizedBox(height: 16),
+                      _backButtons(context),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -215,59 +179,133 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  // ปุ่มย้อนกลับที่อยู่ด้านล่างของหน้าประวัติ
+  Widget _backButtons(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Container ชั้นนอก: ใช้สำหรับเส้นกรอบ gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Colors.white, Colors.lightGreen],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            padding: const EdgeInsets.all(2), // ความหนาของเส้นกรอบ
+            // Container ชั้นใน: ใช้สำหรับพื้นหลังของปุ่มแบบ gradient
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.lightGreen, Colors.green],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors
+                      .transparent, // โปร่งใสเพื่อให้เห็น gradient ของ Container ชั้นใน
+                  shadowColor: Colors.transparent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                child: const Text(
+                  'ย้อนกลับ',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        body: historyItems.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: historyItems.length,
-                      itemBuilder: (context, index) {
-                        final item = historyItems[index];
-                        final formattedDateTime = DateFormat('yyyy/MM/dd HH:mm')
-                            .format(item.createdAt.toLocal());
-                        return Container(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green, width: 2),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(10),
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: item.processedImage.isNotEmpty
-                                  ? Image.memory(
-                                      base64Decode(item.processedImage),
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : const Icon(Icons.image,
-                                      size: 50, color: Colors.green),
-                            ),
-                            title: Text(
-                              'วันที่และเวลา: $formattedDateTime',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            onTap: () {
-                              _showResultDialog(item);
-                            },
-                          ),
-                        );
-                      },
-                    ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.lightGreen, Colors.green],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: historyItems.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : Padding(
+                  padding:
+                      const EdgeInsets.only(top: 20), // เพิ่ม padding top 10px
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: historyItems.length,
+                          itemBuilder: (context, index) {
+                            final item = historyItems[index];
+                            final formattedDateTime =
+                                DateFormat('yyyy/MM/dd HH:mm')
+                                    .format(item.createdAt.toLocal());
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: Colors.green, width: 2),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(10),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: item.processedImage.isNotEmpty
+                                      ? Image.memory(
+                                          base64Decode(item.processedImage),
+                                          width: 50,
+                                          height: 50,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : const Icon(Icons.image,
+                                          size: 50, color: Colors.green),
+                                ),
+                                title: Text(
+                                  'วันที่และเวลา: $formattedDateTime',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                onTap: () {
+                                  _showResultDialog(item);
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      _backButtons(context),
+                    ],
                   ),
-                  _backButtons(context),
-                ],
-              ),
+                ),
+        ),
       ),
     );
   }
