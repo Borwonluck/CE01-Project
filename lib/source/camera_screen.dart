@@ -109,7 +109,7 @@ class _MainPageState extends State<MainPage> {
       // ส่งรูปไปยัง API
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://solely-driving-grackle.ngrok-free.app/detect'),
+        Uri.parse('https://obviously-native-locust.ngrok-free.app/detect'),
       );
       request.files.add(
         await http.MultipartFile.fromPath('file', image.path),
@@ -231,7 +231,7 @@ class _MainPageState extends State<MainPage> {
         // ส่งรูปไปยัง API
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('https://solely-driving-grackle.ngrok-free.app/detect'),
+          Uri.parse(' https://obviously-native-locust.ngrok-free.app/detect'),
         );
         request.files.add(
           await http.MultipartFile.fromPath('file', pickedFile.path),

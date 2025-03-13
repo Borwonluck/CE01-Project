@@ -58,7 +58,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Future<void> fetchHistoryData() async {
     // URL ของ API จาก bitterbeanAPI.py ที่ดึงข้อมูลประวัติจาก PostgreSQL
     final url =
-        Uri.parse('https://solely-driving-grackle.ngrok-free.app/history');
+        Uri.parse('https://obviously-native-locust.ngrok-free.app/history');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
