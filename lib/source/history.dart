@@ -1,40 +1,49 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'result.dart';
 
 class HistoryItem {
-  final String
-      imagePath; // เนื่องจาก API ไม่ส่ง raw image กลับมา เราจะกำหนดเป็นค่าว่าง
-  final String processedImage; // ใช้ field output_image จาก API (Base64 string)
-  final String size; // ไม่มีข้อมูลจริงจาก API => กำหนดเป็น "ไม่ระบุ"
-  final String seedSize; // ไม่มีข้อมูลจริงจาก API => กำหนดเป็น "ไม่ระบุ"
-  final String
-      stage; // ใช้ field class_name จาก API (คุณอาจแปลเป็นภาษาไทยเพิ่มเติมภายหลัง)
-  final DateTime createdAt; // ดึงจาก created_at ใน API
-  final int seedCount; // จาก seed_count ใน API
+  final int id;
+  final String className;
+  final double confidence;
+  final int seedCount;
+  final String widthCm;
+  final String heightCm;
+  final String outputImage; // Base64 encoded image
+  final DateTime createdAt;
+  final String avgBseedWidth;
+  final String avgBseedHeight;
 
   HistoryItem({
-    required this.imagePath,
-    required this.processedImage,
-    required this.size,
-    required this.seedSize,
-    required this.stage,
-    required this.createdAt,
+    required this.id,
+    required this.className,
+    required this.confidence,
     required this.seedCount,
+    required this.widthCm,
+    required this.heightCm,
+    required this.outputImage,
+    required this.createdAt,
+    required this.avgBseedWidth,
+    required this.avgBseedHeight,
   });
 
   factory HistoryItem.fromJson(Map<String, dynamic> json) {
     return HistoryItem(
-      imagePath: "", // API ไม่ส่ง raw image กลับมา
-      processedImage: json['output_image'] ?? '',
-      size: json['size'] ?? "ไม่ระบุ",
-      seedSize: json['seedSize'] ?? "ไม่ระบุ",
-      stage: json['class_name'] ?? "",
-      createdAt: DateTime.parse(json['created_at']),
+      id: json['id'],
+      className: json['class_name'] ?? "",
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
       seedCount: json['seed_count'] ?? 0,
+      widthCm:
+          json['width_cm'] != null ? json['width_cm'].toString() : "ไม่ระบุ",
+      heightCm:
+          json['height_cm'] != null ? json['height_cm'].toString() : "ไม่ระบุ",
+      outputImage: json['output_image'] ?? "",
+      createdAt: DateTime.parse(json['created_at']),
+      avgBseedWidth:
+          json['width_cm'] != null ? json['width_cm'].toString() : "ไม่ระบุ",
+      avgBseedHeight:
+          json['height_cm'] != null ? json['height_cm'].toString() : "ไม่ระบุ",
     );
   }
 }
@@ -47,7 +56,9 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  // เราจะเก็บ HistoryItem เป็น list แม้ว่าจะมีเพียงรายการเดียวจาก API
   List<HistoryItem> historyItems = [];
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -56,17 +67,19 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> fetchHistoryData() async {
-    // URL ของ API จาก bitterbeanAPI.py ที่ดึงข้อมูลประวัติจาก PostgreSQL
     final url =
         Uri.parse('https://obviously-native-locust.ngrok-free.app/history');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        setState(() {
-          historyItems =
-              data.map((item) => HistoryItem.fromJson(item)).toList();
-        });
+        if (mounted) {
+          // ตรวจสอบว่าตัว widget ยังอยู่ใน tree หรือไม่
+          setState(() {
+            historyItems =
+                data.map((item) => HistoryItem.fromJson(item)).toList();
+          });
+        }
       } else {
         throw Exception('Failed to load history');
       }
@@ -75,8 +88,10 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  // ฟังก์ชันแสดงรายละเอียดใน pop-up (Dialog) เมื่อผู้ใช้กดที่รายการประวัติ
+  // แสดงรายละเอียดของ HistoryItem ใน Dialog
   void _showResultDialog(HistoryItem item) {
+    final formattedDate =
+        DateFormat('yyyy/MM/dd HH:mm').format(item.createdAt.toLocal());
     showDialog(
       context: context,
       builder: (context) {
@@ -110,9 +125,9 @@ class _HistoryPageState extends State<HistoryPage> {
                         padding: const EdgeInsets.all(10),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: item.processedImage.isNotEmpty
+                          child: item.outputImage.isNotEmpty
                               ? Image.memory(
-                                  base64Decode(item.processedImage),
+                                  base64Decode(item.outputImage),
                                   fit: BoxFit.contain,
                                 )
                               : const Text(
@@ -122,15 +137,13 @@ class _HistoryPageState extends State<HistoryPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildDetailBox('ขนาด:', item.size),
-                      _buildDetailBox('ขนาดของเมล็ด:', item.seedSize),
-                      _buildDetailBox('ระยะ:', item.stage),
-                      _buildDetailBox('จำนวนเมล็ด:', item.seedCount.toString()),
                       _buildDetailBox(
-                        'วันที่และเวลา:',
-                        DateFormat('yyyy/MM/dd HH:mm')
-                            .format(item.createdAt.toLocal()),
-                      ),
+                          'ขนาด:', '${item.widthCm} x ${item.heightCm} ซม.'),
+                      _buildDetailBox('ขนาดเมล็ด:',
+                          '${item.avgBseedWidth} x ${item.avgBseedHeight} ซม.'),
+                      _buildDetailBox('ระยะ:', item.className),
+                      _buildDetailBox('จำนวนเมล็ด:', item.seedCount.toString()),
+                      _buildDetailBox('วันที่และเวลา:', formattedDate),
                       const SizedBox(height: 16),
                       _backButtons(context),
                     ],
@@ -179,10 +192,9 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  // ปุ่มย้อนกลับที่อยู่ด้านล่างของหน้าประวัติ
   Widget _backButtons(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(top: 20, bottom: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -278,9 +290,9 @@ class _HistoryPageState extends State<HistoryPage> {
                                 contentPadding: const EdgeInsets.all(10),
                                 leading: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: item.processedImage.isNotEmpty
+                                  child: item.outputImage.isNotEmpty
                                       ? Image.memory(
-                                          base64Decode(item.processedImage),
+                                          base64Decode(item.outputImage),
                                           width: 50,
                                           height: 50,
                                           fit: BoxFit.cover,

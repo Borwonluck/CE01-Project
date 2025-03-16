@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:camera/camera.dart';
@@ -45,6 +46,25 @@ class _MainPageState extends State<MainPage> {
     cameraValue = cameraController.initialize();
   }
 
+  // Helper function สำหรับ map stage จากภาษาอังกฤษเป็นภาษาไทย
+  String mapStage(String stage) {
+    // หากมีหลายค่า (คั่นด้วย comma) ให้แยกและ map แต่ละส่วนแล้ว join กลับ
+    List<String> parts = stage.split(',');
+    List<String> mappedParts = parts.map((s) {
+      s = s.trim().toLowerCase();
+      if (s == 'unripe') {
+        return 'อ่อน';
+      } else if (s == 'ripe') {
+        return 'สุก';
+      } else if (s == 'overripe') {
+        return 'แก่เกินสุก';
+      } else {
+        return s;
+      }
+    }).toList();
+    return mappedParts.join(', ');
+  }
+
   void takePicture() async {
     if (!cameraController.value.isInitialized ||
         cameraController.value.isTakingPicture) {
@@ -60,6 +80,7 @@ class _MainPageState extends State<MainPage> {
 
       final image = await cameraController.takePicture();
 
+      // ปิด flash mode หากเปิดอยู่
       if (cameraController.value.flashMode == FlashMode.torch) {
         await cameraController.setFlashMode(FlashMode.off);
       }
@@ -89,8 +110,8 @@ class _MainPageState extends State<MainPage> {
                 border: Border.all(color: Colors.white, width: 3),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   CircularProgressIndicator(),
                   SizedBox(width: 20),
                   Expanded(
@@ -106,7 +127,7 @@ class _MainPageState extends State<MainPage> {
         },
       );
 
-      // ส่งรูปไปยัง API
+      // ส่งรูปต้นฉบับไปยัง API (โดยไม่ลบพื้นหลัง)
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('https://obviously-native-locust.ngrok-free.app/detect'),
@@ -139,34 +160,36 @@ class _MainPageState extends State<MainPage> {
         // รับข้อมูล detections จาก API
         List<dynamic> detections = jsonData['detections'] ?? [];
         String stage;
+        String width_cm = "";
+        String height_cm = "";
+        String avgBseedWidth = "";
+        String avgBseedHeight = "";
         if (detections.isNotEmpty) {
+          var firstDet = detections.first;
+          width_cm = firstDet['width_cm']?.toString() ?? "";
+          height_cm = firstDet['height_cm']?.toString() ?? "";
+          avgBseedWidth = jsonData['avgBseedWidth']?.toString() ?? "";
+          avgBseedHeight = jsonData['avgBseedHeight']?.toString() ?? "";
           stage = detections.map((d) => d['class']).join(', ');
+          stage = mapStage(stage);
         } else {
           stage = 'ไม่ระบุ';
         }
 
-        // แปลงค่าของ stage ตามเงื่อนไข
-        if (stage == 'unripe') {
-          stage = 'อ่อน';
-        } else if (stage == 'ripe') {
-          stage = 'สุก';
-        } else if (stage == 'overripe') {
-          stage = 'แก่';
-        }
-
         if (!context.mounted) return;
 
-        // เปิดหน้า ResultPage พร้อมข้อมูลที่ได้รับจาก API
         await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => ResultPage(
               imagePath: image.path,
               processedImage: processedImage,
-              size: 'ไม่ระบุ',
-              seedSize: 'ไม่ระบุ',
               stage: stage,
               seedCount: seedCount,
               createdAt: DateTime.parse(createdAt),
+              width_cm: width_cm,
+              height_cm: height_cm,
+              avgBseedWidth: avgBseedWidth,
+              avgBseedHeight: avgBseedHeight,
             ),
           ),
         );
@@ -174,7 +197,6 @@ class _MainPageState extends State<MainPage> {
         debugPrint('Error: API ส่งค่ากลับมาไม่สำเร็จ');
       }
     } catch (e) {
-      // หากเกิด error ให้ปิด pop-up (ถ้ายังเปิดอยู่)
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
@@ -188,7 +210,6 @@ class _MainPageState extends State<MainPage> {
 
     if (pickedFile != null && context.mounted) {
       try {
-        // บันทึกเวลาเริ่มต้น
         final startTime = DateTime.now();
 
         // แสดง pop-up แจ้ง "กำลังประมวลผลอยู่ กรุณารอสักครู่"
@@ -211,8 +232,8 @@ class _MainPageState extends State<MainPage> {
                   border: Border.all(color: Colors.white, width: 3),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Row(
-                  children: const [
+                child: const Row(
+                  children: [
                     CircularProgressIndicator(),
                     SizedBox(width: 20),
                     Expanded(
@@ -228,10 +249,10 @@ class _MainPageState extends State<MainPage> {
           },
         );
 
-        // ส่งรูปไปยัง API
+        // ส่งรูปต้นฉบับไปยัง API (โดยไม่ลบพื้นหลัง)
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse(' https://obviously-native-locust.ngrok-free.app/detect'),
+          Uri.parse('https://obviously-native-locust.ngrok-free.app/detect'),
         );
         request.files.add(
           await http.MultipartFile.fromPath('file', pickedFile.path),
@@ -241,14 +262,12 @@ class _MainPageState extends State<MainPage> {
         var responseBody = await response.stream.bytesToString();
         var jsonData = jsonDecode(responseBody);
 
-        // คำนวณเวลาที่ผ่านไป ถ้าน้อยกว่า 2 วินาทีให้รอเพิ่ม
         final elapsed = DateTime.now().difference(startTime);
         const minDuration = Duration(seconds: 2);
         if (elapsed < minDuration) {
           await Future.delayed(minDuration - elapsed);
         }
 
-        // ปิด pop-up หลังจากครบเวลาและ API ส่งค่ากลับมา
         Navigator.pop(context);
 
         if (response.statusCode == 200) {
@@ -256,37 +275,38 @@ class _MainPageState extends State<MainPage> {
           int seedCount = jsonData['seedCount'];
           String createdAt = jsonData['createdAt'];
 
-          // รับข้อมูล detections จาก API
           List<dynamic> detections = jsonData['detections'] ?? [];
           String stage;
+          String width_cm = "";
+          String height_cm = "";
+          String avgBseedWidth = "";
+          String avgBseedHeight = "";
           if (detections.isNotEmpty) {
+            var firstDet = detections.first;
+            width_cm = firstDet['width_cm']?.toString() ?? "";
+            height_cm = firstDet['height_cm']?.toString() ?? "";
+            avgBseedWidth = jsonData['avgBseedWidth']?.toString() ?? "";
+            avgBseedHeight = jsonData['avgBseedHeight']?.toString() ?? "";
             stage = detections.map((d) => d['class']).join(', ');
+            stage = mapStage(stage);
           } else {
             stage = 'ไม่ระบุ';
           }
 
-          // เปลี่ยนค่าของ stage ตามเงื่อนไขที่ต้องการ
-          if (stage == 'unripe') {
-            stage = 'อ่อน';
-          } else if (stage == 'ripe') {
-            stage = 'สุก';
-          } else if (stage == 'overripe') {
-            stage = 'แก่';
-          }
-
           if (!context.mounted) return;
 
-          // เปิดหน้า ResultPage พร้อมข้อมูลที่ได้รับ
           await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ResultPage(
                 imagePath: pickedFile.path,
                 processedImage: processedImage,
-                size: 'ไม่ระบุ',
-                seedSize: 'ไม่ระบุ',
                 stage: stage,
                 seedCount: seedCount,
                 createdAt: DateTime.parse(createdAt),
+                width_cm: width_cm,
+                height_cm: height_cm,
+                avgBseedWidth: avgBseedWidth,
+                avgBseedHeight: avgBseedHeight,
               ),
             ),
           );
@@ -294,7 +314,6 @@ class _MainPageState extends State<MainPage> {
           debugPrint('Error: API ส่งค่ากลับมาไม่สำเร็จ');
         }
       } catch (e) {
-        // หากเกิด error ให้ปิด pop-up (ถ้ายังเปิดอยู่)
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }

@@ -7,23 +7,27 @@ import 'package:intl/intl.dart';
 class ResultPage extends StatelessWidget {
   final String imagePath;
   final String processedImage; // Base64 string ของภาพที่ประมวลผลจาก API
-  final String size;
-  final String seedSize;
   final String stage;
   final bool isFromHistory;
   final DateTime? createdAt;
   final int? seedCount;
+  final String width_cm; // ตัวแปรความกว้างในเซนติเมตร
+  final String height_cm; // ตัวแปรความสูงในเซนติเมตร
+  final String avgBseedWidth;
+  final String avgBseedHeight;
 
   const ResultPage({
     super.key,
     required this.imagePath,
     this.processedImage = "",
-    this.size = '...',
-    this.seedSize = '...',
     this.stage = '...',
     this.isFromHistory = false,
     this.createdAt,
     this.seedCount,
+    this.width_cm = '...',
+    this.height_cm = '...',
+    this.avgBseedWidth = '...',
+    this.avgBseedHeight = '...',
   });
 
   @override
@@ -118,8 +122,9 @@ class ResultPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildDetailBox('ขนาด:', size),
-            _buildDetailBox('ขนาดของเมล็ด:', seedSize),
+            _buildDetailBox('ขนาด:', '$width_cm x $height_cm ซม.'),
+            _buildDetailBox(
+                'ขนาดเมล็ด:', '$avgBseedWidth x $avgBseedHeight ซม.'),
             _buildDetailBox('ระยะ:', stage),
             _buildDetailBox('จำนวนเมล็ด:', seedCount?.toString() ?? '...'),
             // แสดงวันที่และเวลาในกล่องเดียวกัน
