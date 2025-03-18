@@ -67,6 +67,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> fetchHistoryData() async {
+    // URL ของ API จาก bitterbeanAPI.py ที่ดึงข้อมูลประวัติจาก PostgreSQL
     final url =
         Uri.parse('https://obviously-native-locust.ngrok-free.app/history');
     try {
@@ -74,10 +75,11 @@ class _HistoryPageState extends State<HistoryPage> {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {
-          // ตรวจสอบว่าตัว widget ยังอยู่ใน tree หรือไม่
           setState(() {
             historyItems =
                 data.map((item) => HistoryItem.fromJson(item)).toList();
+            // เรียงลำดับจากล่าสุดไปเก่าสุด (โดยใช้ createdAt)
+            historyItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           });
         }
       } else {
