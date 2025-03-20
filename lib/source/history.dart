@@ -90,10 +90,24 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
+  // ฟังก์ชันแปลงค่า stage จากภาษาอังกฤษเป็นภาษาไทย
+  String mapStage(String stage) {
+    String s = stage.toLowerCase();
+    if (s == 'underripe' || s == 'unripe') {
+      return 'อ่อน';
+    } else if (s == 'ripe') {
+      return 'สุก';
+    } else if (s == 'overripe') {
+      return 'แก่';
+    }
+    return stage;
+  }
+
   // แสดงรายละเอียดของ HistoryItem ใน Dialog
   void _showResultDialog(HistoryItem item) {
     final formattedDate =
         DateFormat('yyyy/MM/dd HH:mm').format(item.createdAt.toLocal());
+    String mappedStage = mapStage(item.className);
     showDialog(
       context: context,
       builder: (context) {
@@ -143,7 +157,7 @@ class _HistoryPageState extends State<HistoryPage> {
                           'ขนาด:', '${item.widthCm} x ${item.heightCm} ซม.'),
                       _buildDetailBox('ขนาดเมล็ด:',
                           '${item.avgBseedWidth} x ${item.avgBseedHeight} ซม.'),
-                      _buildDetailBox('ระยะ:', item.className),
+                      _buildDetailBox('ระยะ:', mappedStage),
                       _buildDetailBox('จำนวนเมล็ด:', item.seedCount.toString()),
                       _buildDetailBox('วันที่และเวลา:', formattedDate),
                       const SizedBox(height: 16),
