@@ -40,10 +40,12 @@ class HistoryItem {
           json['height_cm'] != null ? json['height_cm'].toString() : "ไม่ระบุ",
       outputImage: json['output_image'] ?? "",
       createdAt: DateTime.parse(json['created_at']),
-      avgBseedWidth:
-          json['width_cm'] != null ? json['width_cm'].toString() : "ไม่ระบุ",
-      avgBseedHeight:
-          json['height_cm'] != null ? json['height_cm'].toString() : "ไม่ระบุ",
+      avgBseedWidth: json['avgBseedWidth'] != null
+          ? json['avgBseedWidth'].toString()
+          : "ไม่ระบุ",
+      avgBseedHeight: json['avgBseedHeight'] != null
+          ? json['avgBseedHeight'].toString()
+          : "ไม่ระบุ",
     );
   }
 }
@@ -69,7 +71,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Future<void> fetchHistoryData() async {
     // URL ของ API จาก bitterbeanAPI.py ที่ดึงข้อมูลประวัติจาก PostgreSQL
     final url =
-        Uri.parse('https://obviously-native-locust.ngrok-free.app/history');
+        Uri.parse('https://solely-driving-grackle.ngrok-free.app/history');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
